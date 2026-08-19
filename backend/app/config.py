@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     #LLM配置(环境变量读取)
     openai_api_key: str = ""
-    openai_base_irl: str = ""
+    openai_base_url: str = ""
     openai_model: str = ""
 
     # 个性化行程规划模型配置
