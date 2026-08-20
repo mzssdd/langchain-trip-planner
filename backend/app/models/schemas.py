@@ -126,3 +126,13 @@ class TripPlan(BaseModel):
     weather_info: List[WeatherInfo] = Field(default=[], description="天气信息")
     overall_suggestions: str = Field(..., description="总体建议")
     budget: Optional[Budget] = Field(default=None, description="预算信息")
+
+
+class POIInfo(BaseModel):
+    """POI信息"""
+    id: str = Field(..., description="POI ID")
+    name: str = Field(..., description="名称")
+    type: str = Field(..., description="类型")
+    address: str = Field(..., description="地址")
+    location: Location = Field(..., description="经纬度坐标")
+    tel: Optional[str] = Field(default=None, description="电话")
