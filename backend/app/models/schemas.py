@@ -136,3 +136,54 @@ class POIInfo(BaseModel):
     address: str = Field(..., description="地址")
     location: Location = Field(..., description="经纬度坐标")
     tel: Optional[str] = Field(default=None, description="电话")
+
+
+class BudgetConstraint(BaseModel):
+    """预算约束"""
+    amount: Optional[int] = Field(default=None, description="整趟旅行总预算；无明确预算时为null", ge=0, example=1200)
+    scope: str = Field(default="total", description="预算口径，固定为total", example="total")
+    currency: str = Field(default="CNY", description="币种", example="CNY")
+    budget_level: str = Field(default="standard", description="预算档位", example="limited")
+    strictness: str = Field(default="none", description="预算严格程度: hard/soft/none", example="soft")
+
+
+class TripRequest(BaseModel):
+    """旅行规划请求"""
+    city: str = Field(..., description="目的地城市", example="北京")
+    start_date: str = Field(..., description="开始日期 YYYY-MM-DD", example="2025-06-01")
+    end_date: str = Field(..., description="结束日期 YYYY-MM-DD", example="2025-06-03")
+    travel_days: int = Field(..., description="旅行天数", ge=1, le=30, example=3)
+    transportation: str = Field(..., description="交通方式", example="公共交通")
+    accommodation: str = Field(..., description="住宿偏好", example="经济型酒店")
+    preferences: List[str] = Field(default=[], description="旅行偏好标签", example=["历史文化", "美食"])
+    free_text_input: Optional[str] = Field(default="", description="额外要求", example="希望多安排一些博物馆")
+    party: PartyInfo = Field(..., description="同行人数")
+    budget_constraint: BudgetConstraint = Field(..., description="预算约束")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "city": "北京",
+                "start_date": "2025-06-01",
+                "end_date": "2025-06-03",
+                "travel_days": 3,
+                "transportation": "公共交通",
+                "accommodation": "经济型酒店",
+                "preferences": ["历史文化", "美食"],
+                "free_text_input": "希望多安排一些博物馆",
+                "party": {
+                    "adults": 2,
+                    "children": 0,
+                    "elders": 0,
+                    "total": 2,
+                    "companion_type": "couple"
+                },
+                "budget_constraint": {
+                    "amount": 1200,
+                    "scope": "total",
+                    "currency": "CNY",
+                    "budget_level": "limited",
+                    "strictness": "soft"
+                }
+            }
+        }
