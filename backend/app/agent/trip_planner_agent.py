@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 
 
 from ..config import get_settings
+from ..planner
 
 
 
@@ -40,6 +41,12 @@ class MultAgentTripPlanner:
         try:
             settings = get_settings()
             self.settings = settings
+            self.amap_api_key = settings.amap_api_key or os.getenv("AMAP_MAPS_API_KEY") or os.getenv("AMAP_API_KEY")
+            self.planner_context_builder = PlannerContextBuilder(self.amap_api_key)
+            self.tool_llm = get_llm()
+            self.planner_llm = get_planner_llm()
+            self.llm = self.tool_llm
+
 
         except Exception as e:
             print(f"❌ 多智能体系统初始化失败: {str(e)}")

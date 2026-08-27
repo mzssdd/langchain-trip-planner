@@ -37,7 +37,7 @@ def get_llm() -> BaseChatModel:
     return _llm_instance
 
 
-def get_planner_llm() -> HelloAgentsLLM:
+def get_planner_llm() -> BaseChatModel:
     """
     获取最终行程规划 LLM。
 
@@ -74,7 +74,7 @@ def get_planner_llm() -> HelloAgentsLLM:
             "LLM_PROVIDER": provider,
         }
         with _temporary_env(overrides):
-            _planner_llm_instance = HelloAgentsLLM()
+            _planner_llm_instance = BaseChatModel()
 
         print("✅ 个性化 Planner LLM 初始化成功")
         print(f"   提供商: {_planner_llm_instance.provider}")
