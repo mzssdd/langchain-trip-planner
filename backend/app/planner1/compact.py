@@ -1,7 +1,6 @@
-"""Planner 输入压缩逻辑。"""
+"""Planner输入压缩逻辑"""
 
 from typing import Any, Dict, List
-
 
 def compact_for_planner(planner_context: Dict[str, Any]) -> Dict[str, Any]:
     """把原始工具快照压缩成模型真正需要看的 Planner 输入。"""
@@ -38,7 +37,6 @@ def compact_for_planner(planner_context: Dict[str, Any]) -> Dict[str, Any]:
         },
         "planner_constraints": planner_context.get("planner_constraints", {}),
     }
-
 
 def compact_weather(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """裁剪天气字段，只保留生成 weather_info 需要的内容。"""

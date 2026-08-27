@@ -1,9 +1,9 @@
-"""Planner 路线时间 hint 构造。"""
+"""Planner 路线时间 hint 构造"""
 
 import math
-from typing import Any, Dict, List
-
+from typing import Any,Dict,List
 from ..models.schemas import TripRequest
+
 
 
 def build_route_hints(
@@ -37,7 +37,6 @@ def build_route_hints(
 
     return hints[:limit]
 
-
 def route_hint(
     origin: Dict[str, Any],
     origin_bucket: str,
@@ -62,7 +61,7 @@ def route_hint(
 
 
 def haversine_km(left: Dict[str, Any], right: Dict[str, Any]) -> float:
-    """计算两个经纬度点的直线距离。"""
+    """计算两个经纬度点的直线距离"""
     if not left or not right:
         return 0.0
     lon1 = math.radians(float(left.get("longitude", 0)))

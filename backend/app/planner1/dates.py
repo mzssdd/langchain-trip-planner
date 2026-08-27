@@ -1,13 +1,12 @@
-"""Planner 日期和天气占位工具。"""
+"""Planner 日期和天气占位工具"""
 
 from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
 from ..models.schemas import TripRequest
 
-
 def trip_date_strings(request: TripRequest) -> List[str]:
-    """根据start_date和travel_days生成行程日期。"""
+    """根据start_date和travel_days生成行程日程"""
     start_date = datetime.strptime(request.start_date, "%Y-%m-%d")
     return [(start_date + timedelta(days=index)).strftime("%Y-%m-%d") for index in range(request.travel_days)]
 

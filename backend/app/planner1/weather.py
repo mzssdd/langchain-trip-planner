@@ -1,16 +1,16 @@
-"""Planner 天气规范化逻辑。"""
+"""Planner 天气规范化逻辑"""
 
-from typing import Any, Dict, List
+from typing import Any, List, Dict
 
 from ..models.schemas import TripRequest
 from .dates import trip_date_strings, unknown_weather_row
 
-
 def normalize_weather(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """规范化高德天气预报。"""
-    forecasts = raw.get("forecasts") or []
+    """规范化高的天气预报"""
+    forecasts = raw.get('forecasts') or []
     if not forecasts:
-        return []
+        return[]
+
 
     rows = []
     for item in forecasts[0].get("casts", []):
@@ -39,6 +39,7 @@ def align_trip_weather(request: TripRequest, available_weather: List[Dict[str, A
         else:
             rows.append(unknown_weather_row(date_text))
     return rows
+
 
 
 def parse_temperature_value(value: Any) -> Any:

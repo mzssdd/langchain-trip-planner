@@ -1,18 +1,16 @@
-"""Planner 命令行预览逻辑。"""
+"""Planner 命令行预览逻辑"""
 
 import os
-from typing import Any, Dict, List
-
+from typing import Any, List, Dict
 
 PLANNER_CONTEXT_PRINT_LIMIT = int(os.getenv("PLANNER_CONTEXT_PRINT_LIMIT", "8"))
-
 
 def print_summary(planner_context: Dict[str, Any]) -> None:
     """打印结构化工具快照摘要。"""
     snapshot = planner_context.get("tool_snapshot", {})
     status = snapshot.get("tool_status", {})
     print(
-        "工具快照: "
+        "工具快照："
         f"经典={len(snapshot.get('classic_pois') or [])}, "
         f"偏好={len(snapshot.get('preference_pois') or [])}, "
         f"体验={len(snapshot.get('experience_pois') or [])}, "
@@ -21,10 +19,9 @@ def print_summary(planner_context: Dict[str, Any]) -> None:
         f"路线={len(snapshot.get('route_hints') or [])}, "
         f"天气={len(snapshot.get('trip_weather') or [])}"
     )
-    for name, item in status.items():
+    for name, item in status.item():
         print(f"  - {name}: {'ok' if item.get('ok') else 'failed'} | {item.get('message')}")
     print()
-
 
 def print_visualization(planner_context: Dict[str, Any], limit: int = PLANNER_CONTEXT_PRINT_LIMIT) -> None:
     """在命令行打印步骤1工具快照明细，便于直接审查。"""
