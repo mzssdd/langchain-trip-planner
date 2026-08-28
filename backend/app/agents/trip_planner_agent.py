@@ -74,12 +74,12 @@ class MultiAgentTripPlanner:
             print("  - 创建行程规划Agent...")
             self.planner_agent = create_agent(
                 name="行程规划专家",
-                llm = self.planner_llm,
+                model = self.planner_llm,
                 system_prompt=PLANNER_AGENT_PROMPT
             )
             self.fallback_planner_agent = create_agent(
                 name="默认行程规划专家",
-                llm=self.tool_llm,
+                model=self.tool_llm,
                 system_prompt=PLANNER_AGENT_PROMPT
             )
             print(f"✅ 多智能体系统初始化成功")
@@ -215,16 +215,70 @@ class MultiAgentTripPlanner:
         print(f"[TIMER] {label}: {elapsed:.2f}s", flush=True)
 
 
-    def _run_agent_stateless(self, agent: BaseChatModel, input_text: str, **kwargs) -> str:
-        """Run a BaseChatModel without carrying history across trip requests."""
-        if hasattr(agent, "_history"):
+    def _run_agent_stateless(self, agent: Any, input_text: str, **kwargs) -> str:
+        """运行无状态 Planner，兼容旧式 chat model 和新式 langgraph agent。"""
+        if hasattr(agent, '_history'):
             agent._history = []
 
         try:
-            return agent.run(input_text, **kwargs)
+            if hasattr(agent, 'invoke'):
+                result = agent.invoke(
+                    {
+                        'messages': [
+                            {
+                                'role': 'user',
+                                'content': input_text,
+                            }
+                        ]
+                    },
+                    **kwargs,
+                )
+                return self._extract_agent_text(result)
+
+            if hasattr(agent, 'run'):
+                return agent.run(input_text, **kwargs)
+
+            raise TypeError(f'Unsupported agent type: {type(agent).__name__}')
         finally:
-            if hasattr(agent, "_history"):
+            if hasattr(agent, '_history'):
                 agent._history = []
+
+    def _extract_agent_text(self, result: Any) -> str:
+        """从 agent invoke 的返回结果中提取最终文本。"""
+        if isinstance(result, str):
+            return result
+
+        if isinstance(result, dict):
+            messages = result.get('messages') or []
+            if messages:
+                last_message = messages[-1]
+                content = getattr(last_message, 'content', None)
+                if content is None and isinstance(last_message, dict):
+                    content = last_message.get('content')
+
+                if isinstance(content, str):
+                    return content
+
+                if isinstance(content, list):
+                    text_parts = []
+                    for item in content:
+                        if isinstance(item, str):
+                            text_parts.append(item)
+                            continue
+
+                        if isinstance(item, dict) and item.get('type') == 'text':
+                            text = item.get('text')
+                            if text:
+                                text_parts.append(str(text))
+
+                    if text_parts:
+                        return '\n'.join(text_parts)
+
+            output = result.get('output')
+            if isinstance(output, str):
+                return output
+
+        raise ValueError(f'无法从agent响应中提取文本: {type(result).__name__}')
 
 
     def _generate_trip_plan_with_retries(

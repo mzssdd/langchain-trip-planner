@@ -2,7 +2,7 @@
 
 import requests
 from ..config import get_settings
-from typing import List,Dict
+from typing import List,Dict,Optional
 
 class UnsplashService:
     """Unsplash图片服务类"""
