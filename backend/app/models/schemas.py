@@ -201,6 +201,24 @@ class TripPlanResponse(BaseModel):
     data: Optional[TripPlan] = Field(default=None, description="旅行计划数据")
 
 
+class TripTaskCreateResponse(BaseModel):
+    """创建旅行规划任务响应"""
+    success: bool = Field(..., description="是否成功")
+    message: str = Field(default="", description="消息")
+    task_id: str = Field(..., description="任务ID")
+    status: str = Field(..., description="任务状态")
+
+
+class TripTaskStatusResponse(BaseModel):
+    """旅行规划任务状态响应"""
+    success: bool = Field(..., description="是否成功")
+    message: str = Field(default="", description="消息")
+    task_id: str = Field(..., description="任务ID")
+    status: str = Field(..., description="任务状态")
+    data: Optional[TripPlan] = Field(default=None, description="旅行计划数据")
+    error: Optional[str] = Field(default=None, description="错误信息")
+
+
 class POIInfo(BaseModel):
     """POI信息"""
     id: str = Field(..., description="POI ID")

@@ -126,3 +126,19 @@ export interface HealthResponse {
   planner_ready?: boolean
   fallback_ready?: boolean
 }
+
+export interface TripTaskCreateResponse {
+  success: boolean
+  message: string
+  task_id: string
+  status: string
+}
+
+export interface TripTaskStatusResponse {
+  success: boolean
+  message: string
+  task_id: string
+  status: 'pending' | 'running' | 'success' | 'failed'
+  data?: TripPlan
+  error?: string | null
+}

@@ -1,14 +1,93 @@
 """旅行规划API路由"""
 
+import threading
+import traceback
+import uuid
+from typing import Dict, Optional, TypedDict
+
 from fastapi import APIRouter, HTTPException
 from ...models.schemas import (
+    ErrorResponse,
     TripRequest,
+    TripTaskCreateResponse,
+    TripTaskStatusResponse,
     TripPlanResponse,
-    ErrorResponse
 )
 from ...agents.trip_planner_agent import get_trip_planner_agent
 
 router = APIRouter(prefix="/trip", tags=["旅行规划"])
+
+
+class TripTaskState(TypedDict):
+    status: str
+    message: str
+    data: Optional[dict]
+    error: Optional[str]
+
+
+tripTaskMap: Dict[str, TripTaskState] = {}
+tripTaskLock = threading.Lock()
+
+
+def setTripTask(taskId: str, **kwargs) -> None:
+    with tripTaskLock:
+        currentTask = tripTaskMap.get(taskId, {
+            'status': 'pending',
+            'message': '',
+            'data': None,
+            'error': None,
+        })
+        currentTask.update(kwargs)
+        tripTaskMap[taskId] = currentTask
+
+
+def runTripTask(taskId: str, request: TripRequest) -> None:
+    try:
+        setTripTask(
+            taskId,
+            status='running',
+            message='旅行计划生成中',
+            error=None,
+        )
+
+        print(f"\n{'=' * 60}")
+        print(f"📥 收到旅行规划请求:")
+        print(f"   task_id: {taskId}")
+        print(f"   城市: {request.city}")
+        print(f"   日期: {request.start_date} - {request.end_date}")
+        print(f"   天数: {request.travel_days}")
+        print(f"{'=' * 60}\n")
+
+        print('🔄 获取多智能体系统实例...')
+        agent = get_trip_planner_agent()
+
+        print('🚀 开始生成旅行计划...')
+        tripPlan = agent.plan_trip(request)
+        generationStatus = getattr(agent, 'last_generation_status', 'unknown')
+        generationMessage = getattr(agent, 'last_generation_message', '') or '旅行计划生成完成'
+
+        if generationStatus == 'fallback_success':
+            print(f"⚠️  {generationMessage}, 准备返回fallback响应\n")
+        else:
+            print(f"✅ {generationMessage}, 准备返回响应\n")
+
+        setTripTask(
+            taskId,
+            status='success',
+            message=generationMessage,
+            data=tripPlan.model_dump(),
+            error=None,
+        )
+    except Exception as error:
+        print(f"❌ 生成旅行计划失败: {str(error)}")
+        traceback.print_exc()
+        setTripTask(
+            taskId,
+            status='failed',
+            message='生成旅行计划失败',
+            error=str(error),
+            data=None,
+        )
 
 
 @router.post(
@@ -64,6 +143,65 @@ async def plan_trip(request: TripRequest):
             status_code=500,
             detail=f"生成旅行计划失败: {str(e)}"
         )
+
+
+@router.post(
+    '/plan-task',
+    response_model=TripTaskCreateResponse,
+    summary='创建旅行规划任务',
+    description='创建异步旅行规划任务，立即返回 task_id'
+)
+async def create_trip_plan_task(request: TripRequest):
+    """创建异步旅行规划任务"""
+    taskId = uuid.uuid4().hex
+    setTripTask(
+        taskId,
+        status='pending',
+        message='任务已创建，等待执行',
+        data=None,
+        error=None,
+    )
+
+    workerThread = threading.Thread(
+        target=runTripTask,
+        args=(taskId, request),
+        daemon=True,
+    )
+    workerThread.start()
+
+    return TripTaskCreateResponse(
+        success=True,
+        message='任务创建成功',
+        task_id=taskId,
+        status='pending',
+    )
+
+
+@router.get(
+    '/plan-task/{task_id}',
+    response_model=TripTaskStatusResponse,
+    summary='查询旅行规划任务状态',
+    description='根据 task_id 查询异步旅行规划任务状态和结果'
+)
+async def get_trip_plan_task(task_id: str):
+    """查询异步旅行规划任务状态"""
+    with tripTaskLock:
+        taskInfo = tripTaskMap.get(task_id)
+
+    if taskInfo is None:
+        raise HTTPException(
+            status_code=404,
+            detail='任务不存在'
+        )
+
+    return TripTaskStatusResponse(
+        success=taskInfo['status'] != 'failed',
+        message=taskInfo['message'],
+        task_id=task_id,
+        status=taskInfo['status'],
+        data=taskInfo['data'],
+        error=taskInfo['error'],
+    )
 
 
 @router.get(

@@ -268,7 +268,23 @@
           >
             开始生成行程
           </a-button>
-          <span class="submit-tip">提交后会调用当前后端 `/api/trip/plan`</span>
+          <span class="submit-tip">提交后会创建异步任务并轮询结果</span>
+        </div>
+
+        <div v-if="taskState.status" class="task-status-panel">
+          <div class="task-status-title">任务状态</div>
+          <div class="task-status-row">
+            <span class="task-status-label">状态</span>
+            <span class="task-status-value">{{ taskStatusText }}</span>
+          </div>
+          <div v-if="taskState.taskId" class="task-status-row">
+            <span class="task-status-label">任务 ID</span>
+            <span class="task-status-value">{{ taskState.taskId }}</span>
+          </div>
+          <div v-if="taskState.message" class="task-status-row">
+            <span class="task-status-label">说明</span>
+            <span class="task-status-value">{{ taskState.message }}</span>
+          </div>
         </div>
       </a-form>
     </a-card>
@@ -283,9 +299,9 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
 
-import { fetchTripPlan, getTripHealth } from '@/apis/tripApi'
+import { createTripPlanTask, getTripHealth, getTripPlanTask } from '@/apis/tripApi'
 import { TRIP_PLAN_STORAGE_KEY, getDefaultCompanionType, getPartyTotal, getTravelDays } from '@/utils/common'
-import type { HealthResponse, TripRequest } from '@/types'
+import type { HealthResponse, TripRequest, TripTaskStatusResponse } from '@/types'
 
 interface TripFormState {
   city: string
@@ -317,6 +333,16 @@ const healthState = reactive<{
   data: null,
   isError: false,
 })
+const taskState = reactive<{
+  taskId: string
+  status: '' | 'pending' | 'running' | 'success' | 'failed'
+  message: string
+}>({
+  taskId: '',
+  status: '',
+  message: '',
+})
+let taskTimer: number | null = null
 
 const formState = reactive<TripFormState>({
   city: '',
@@ -428,6 +454,17 @@ const healthTagColor = computed(() => {
   return 'processing'
 })
 
+const taskStatusText = computed(() => {
+  const statusMap: Record<string, string> = {
+    pending: '任务已创建',
+    running: '正在生成',
+    success: '生成完成',
+    failed: '生成失败',
+  }
+
+  return statusMap[taskState.status] || '未开始'
+})
+
 // watch
 watch(
   () => [formState.start_date, formState.end_date],
@@ -519,6 +556,10 @@ async function handleSubmit() {
   }
 
   isSubmitting.value = true
+  clearTaskTimer()
+  taskState.taskId = ''
+  taskState.status = 'pending'
+  taskState.message = '正在创建任务'
 
   try {
     const strictness = formState.budget_constraint.amount ? formState.budget_constraint.strictness : 'none'
@@ -541,18 +582,63 @@ async function handleSubmit() {
       },
     }
 
-    const response = await fetchTripPlan(requestData)
+    const createResponse = await createTripPlanTask(requestData)
+    taskState.taskId = createResponse.task_id
+    taskState.status = 'pending'
+    taskState.message = createResponse.message || '任务已创建'
 
-    if (!response.success || !response.data) {
-      message.error(response.message || '生成旅行计划失败')
-      return
-    }
-
-    sessionStorage.setItem(TRIP_PLAN_STORAGE_KEY, JSON.stringify(response.data))
-    message.success(response.message || '旅行计划生成成功')
-    router.push('/result')
+    await pollTripTask(createResponse.task_id)
   } finally {
     isSubmitting.value = false
+  }
+}
+
+async function pollTripTask(taskId: string) {
+  return new Promise<void>((resolve, reject) => {
+    async function queryTask() {
+      try {
+        const response = await getTripPlanTask(taskId)
+        updateTaskState(response)
+
+        if (response.status === 'success' && response.data) {
+          clearTaskTimer()
+          sessionStorage.setItem(TRIP_PLAN_STORAGE_KEY, JSON.stringify(response.data))
+          message.success(response.message || '旅行计划生成成功')
+          router.push('/result')
+          resolve()
+          return
+        }
+
+        if (response.status === 'failed') {
+          clearTaskTimer()
+          const errorMessage = response.error || response.message || '生成旅行计划失败'
+          message.error(errorMessage)
+          reject(new Error(errorMessage))
+          return
+        }
+
+        taskTimer = window.setTimeout(queryTask, 3000)
+      } catch (error) {
+        clearTaskTimer()
+        message.error('查询任务状态失败')
+        reject(error)
+      }
+    }
+
+    queryTask()
+  })
+}
+
+function updateTaskState(response: TripTaskStatusResponse) {
+  taskState.taskId = response.task_id
+  taskState.status = response.status
+  taskState.message = response.message
+}
+
+function clearTaskTimer() {
+  if (taskTimer !== null) {
+    window.clearTimeout(taskTimer)
+    taskTimer = null
   }
 }
 </script>
@@ -704,6 +790,43 @@ async function handleSubmit() {
 .submit-tip {
   color: #64748b;
   font-size: 13px;
+}
+
+.task-status-panel {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  background: #f8fbff;
+}
+
+.task-status-title {
+  margin-bottom: 12px;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.task-status-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.task-status-row:last-child {
+  margin-bottom: 0;
+}
+
+.task-status-label {
+  min-width: 64px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.task-status-value {
+  color: #0f172a;
+  line-height: 1.6;
+  word-break: break-all;
 }
 
 @media (max-width: 900px) {
