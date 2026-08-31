@@ -76,12 +76,16 @@ async def health_check():
     try:
         # 检查Agent是否可用
         agent = get_trip_planner_agent()
+        planner_agent = getattr(agent, 'planner_agent', None)
+        fallback_planner_agent = getattr(agent, 'fallback_planner_agent', None)
 
         return {
-            "status": "healthy",
-            "service": "trip-planner",
-            "agent_name": agent.agent.name,
-            "tools_count": len(agent.agent.list_tools())
+            'status': 'healthy',
+            'service': 'trip-planner',
+            'agent_name': getattr(planner_agent, 'name', '行程规划专家'),
+            'fallback_agent_name': getattr(fallback_planner_agent, 'name', '默认行程规划专家'),
+            'planner_ready': planner_agent is not None,
+            'fallback_ready': fallback_planner_agent is not None,
         }
     except Exception as e:
         raise HTTPException(
