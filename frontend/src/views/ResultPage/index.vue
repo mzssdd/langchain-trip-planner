@@ -22,121 +22,35 @@
           </p>
         </div>
 
-        <div v-if="tripPlan.budget" class="budget-panel">
-          <div class="budget-panel-title">预算概览</div>
-          <div class="budget-total">¥{{ tripPlan.budget.total }}</div>
-          <div class="budget-grid">
-            <div class="budget-item">
-              <span>景点</span>
-              <strong>¥{{ tripPlan.budget.total_attractions }}</strong>
-            </div>
-            <div class="budget-item">
-              <span>住宿</span>
-              <strong>¥{{ tripPlan.budget.total_hotels }}</strong>
-            </div>
-            <div class="budget-item">
-              <span>餐饮</span>
-              <strong>¥{{ tripPlan.budget.total_meals }}</strong>
-            </div>
-            <div class="budget-item">
-              <span>交通</span>
-              <strong>¥{{ tripPlan.budget.total_transportation }}</strong>
+        <div class="summary-side">
+          <div v-if="tripPlan.budget" class="budget-panel">
+            <div class="budget-panel-title">预算概览</div>
+            <div class="budget-total">¥{{ tripPlan.budget.total }}</div>
+            <div class="budget-grid">
+              <div class="budget-item">
+                <span>景点</span>
+                <strong>¥{{ tripPlan.budget.total_attractions }}</strong>
+              </div>
+              <div class="budget-item">
+                <span>住宿</span>
+                <strong>¥{{ tripPlan.budget.total_hotels }}</strong>
+              </div>
+              <div class="budget-item">
+                <span>餐饮</span>
+                <strong>¥{{ tripPlan.budget.total_meals }}</strong>
+              </div>
+              <div class="budget-item">
+                <span>交通</span>
+                <strong>¥{{ tripPlan.budget.total_transportation }}</strong>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      <a-row :gutter="[20, 20]" class="content-grid">
-        <a-col :xs="24" :xl="16">
-          <a-card title="每日行程" :bordered="false" class="content-card">
-            <a-collapse v-model:activeKey="activeDayKey">
-              <a-collapse-panel
-                v-for="day in tripPlan.days"
-                :key="String(day.day_index)"
-              >
-                <template #header>
-                  <div class="day-header">
-                    <span class="day-header-title">第 {{ day.day_index + 1 }} 天</span>
-                    <span class="day-header-date">{{ day.date }}</span>
-                  </div>
-                </template>
-
-                <div class="day-section">
-                  <div class="info-row">
-                    <span class="info-label">行程描述</span>
-                    <span class="info-value">{{ day.description }}</span>
-                  </div>
-                  <div class="info-row">
-                    <span class="info-label">交通方式</span>
-                    <span class="info-value">{{ day.transportation }}</span>
-                  </div>
-                  <div class="info-row">
-                    <span class="info-label">住宿说明</span>
-                    <span class="info-value">{{ day.accommodation }}</span>
-                  </div>
-                </div>
-
-                <div class="day-section">
-                  <div class="section-subtitle">景点安排</div>
-                  <div class="poi-grid">
-                    <div
-                      v-for="attraction in day.attractions"
-                      :key="`${day.day_index}-${attraction.name}`"
-                      class="poi-card"
-                    >
-                      <div v-if="attraction.image_url" class="poi-image-wrap">
-                        <img
-                          :src="attraction.image_url"
-                          :alt="attraction.name"
-                          class="poi-image"
-                        />
-                      </div>
-                      <div class="poi-card-title">{{ attraction.name }}</div>
-                      <div class="poi-card-text">{{ attraction.address }}</div>
-                      <div class="poi-card-text">{{ attraction.description }}</div>
-                      <div class="poi-card-meta">
-                        游览 {{ attraction.visit_duration }} 分钟
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="day.hotel" class="day-section">
-                  <div class="section-subtitle">酒店推荐</div>
-                  <div class="hotel-card">
-                    <div class="poi-card-title">{{ day.hotel.name }}</div>
-                    <div class="poi-card-text">{{ day.hotel.address }}</div>
-                    <div class="hotel-meta">
-                      <span>{{ day.hotel.type || '酒店' }}</span>
-                      <span>{{ day.hotel.price_range || '价格待定' }}</span>
-                      <span>{{ day.hotel.rating || '评分待定' }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="day-section">
-                  <div class="section-subtitle">餐饮安排</div>
-                  <a-timeline>
-                    <a-timeline-item
-                      v-for="meal in day.meals"
-                      :key="`${day.day_index}-${meal.type}-${meal.name}`"
-                    >
-                      <div class="meal-title">{{ getMealLabel(meal.type) }} · {{ meal.name }}</div>
-                      <div class="poi-card-text">{{ meal.description || meal.address || '暂无补充说明' }}</div>
-                    </a-timeline-item>
-                  </a-timeline>
-                </div>
-              </a-collapse-panel>
-            </a-collapse>
-          </a-card>
-        </a-col>
-
-        <a-col :xs="24" :xl="8">
           <a-card
             v-if="tripPlan.weather_info.length"
             title="天气信息"
             :bordered="false"
-            class="content-card"
+            class="side-card"
           >
             <div class="weather-list">
               <div
@@ -157,8 +71,90 @@
               </div>
             </div>
           </a-card>
-        </a-col>
-      </a-row>
+        </div>
+      </section>
+
+      <a-card title="每日行程" :bordered="false" class="content-card">
+        <a-collapse v-model:activeKey="activeDayKey" accordion>
+          <a-collapse-panel
+            v-for="day in tripPlan.days"
+            :key="String(day.day_index)"
+          >
+            <template #header>
+              <div class="day-header">
+                <span class="day-header-title">第 {{ day.day_index + 1 }} 天</span>
+                <span class="day-header-date">{{ day.date }}</span>
+              </div>
+            </template>
+
+            <div class="day-section">
+              <div class="info-row">
+                <span class="info-label">行程描述</span>
+                <span class="info-value">{{ day.description }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">交通方式</span>
+                <span class="info-value">{{ day.transportation }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">住宿说明</span>
+                <span class="info-value">{{ day.accommodation }}</span>
+              </div>
+            </div>
+
+            <div class="day-section">
+              <div class="section-subtitle">景点安排</div>
+              <div class="poi-grid">
+                <div
+                  v-for="attraction in day.attractions"
+                  :key="`${day.day_index}-${attraction.name}`"
+                  class="poi-card"
+                >
+                  <div v-if="attraction.image_url" class="poi-image-wrap">
+                    <img
+                      :src="attraction.image_url"
+                      :alt="attraction.name"
+                      class="poi-image"
+                    />
+                  </div>
+                  <div class="poi-card-title">{{ attraction.name }}</div>
+                  <div class="poi-card-text">{{ attraction.address }}</div>
+                  <div class="poi-card-text">{{ attraction.description }}</div>
+                  <div class="poi-card-meta">
+                    游览 {{ attraction.visit_duration }} 分钟
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="day.hotel" class="day-section">
+              <div class="section-subtitle">酒店推荐</div>
+              <div class="hotel-card">
+                <div class="poi-card-title">{{ day.hotel.name }}</div>
+                <div class="poi-card-text">{{ day.hotel.address }}</div>
+                <div class="hotel-meta">
+                  <span>{{ day.hotel.type || '酒店' }}</span>
+                  <span>{{ day.hotel.price_range || '价格待定' }}</span>
+                  <span>{{ day.hotel.rating || '评分待定' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="day-section">
+              <div class="section-subtitle">餐饮安排</div>
+              <a-timeline>
+                <a-timeline-item
+                  v-for="meal in day.meals"
+                  :key="`${day.day_index}-${meal.type}-${meal.name}`"
+                >
+                  <div class="meal-title">{{ getMealLabel(meal.type) }} · {{ meal.name }}</div>
+                  <div class="poi-card-text">{{ meal.description || meal.address || '暂无补充说明' }}</div>
+                </a-timeline-item>
+              </a-timeline>
+            </div>
+          </a-collapse-panel>
+        </a-collapse>
+      </a-card>
     </template>
 
     <a-empty v-else description="没有找到旅行计划">
@@ -219,9 +215,9 @@ function getMealLabel(type: Meal['type']): string {
 
 <style scoped>
 .result-page {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 28px 20px 48px;
+  padding: 28px 20px 56px;
 }
 
 .page-toolbar {
@@ -232,20 +228,32 @@ function getMealLabel(type: Meal['type']): string {
 
 .summary-section {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
   gap: 20px;
   margin-bottom: 20px;
 }
 
+.summary-main,
+.budget-panel,
+.side-card,
+.content-card {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 20px 50px rgba(31, 41, 55, 0.08);
+  backdrop-filter: blur(16px);
+}
+
 .summary-main {
-  padding: 30px 32px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
-  color: #ffffff;
+  padding: 32px;
+  background:
+    linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(17, 24, 39, 0.88)),
+    linear-gradient(180deg, #0f172a, #134e4a);
+  color: #fffaf3;
 }
 
 .summary-kicker {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.68);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -259,7 +267,7 @@ function getMealLabel(type: Meal['type']): string {
 
 .summary-description {
   margin: 14px 0 0;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 250, 243, 0.76);
   font-size: 15px;
 }
 
@@ -268,15 +276,17 @@ function getMealLabel(type: Meal['type']): string {
   line-height: 1.8;
 }
 
+.summary-side {
+  display: grid;
+  gap: 20px;
+}
+
 .budget-panel {
   padding: 24px;
-  border-radius: 24px;
-  background: #ffffff;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
 }
 
 .budget-panel-title {
-  color: #64748b;
+  color: #6b7280;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -285,7 +295,7 @@ function getMealLabel(type: Meal['type']): string {
 
 .budget-total {
   margin-top: 14px;
-  color: #0f172a;
+  color: #13202f;
   font-size: 36px;
   font-weight: 700;
 }
@@ -300,25 +310,29 @@ function getMealLabel(type: Meal['type']): string {
 .budget-item {
   padding: 14px;
   border-radius: 16px;
-  background: #f8fbff;
+  background: #fbf9f4;
 }
 
 .budget-item span {
   display: block;
-  color: #64748b;
+  color: #6b7280;
   font-size: 13px;
 }
 
 .budget-item strong {
   display: block;
   margin-top: 6px;
-  color: #0f172a;
+  color: #13202f;
   font-size: 18px;
 }
 
+.side-card,
 .content-card {
-  border-radius: 24px;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.content-card {
+  padding: 0;
 }
 
 .day-header {
@@ -330,12 +344,12 @@ function getMealLabel(type: Meal['type']): string {
 }
 
 .day-header-title {
-  color: #0f172a;
+  color: #13202f;
   font-weight: 700;
 }
 
 .day-header-date {
-  color: #64748b;
+  color: #6b7280;
   font-size: 13px;
 }
 
@@ -351,18 +365,18 @@ function getMealLabel(type: Meal['type']): string {
 
 .info-label {
   min-width: 84px;
-  color: #64748b;
+  color: #6b7280;
   font-weight: 600;
 }
 
 .info-value {
-  color: #0f172a;
+  color: #13202f;
   line-height: 1.7;
 }
 
 .section-subtitle {
   margin-bottom: 12px;
-  color: #0f172a;
+  color: #13202f;
   font-size: 16px;
   font-weight: 700;
 }
@@ -377,9 +391,9 @@ function getMealLabel(type: Meal['type']): string {
 .hotel-card,
 .weather-card {
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e3e8f0;
   border-radius: 18px;
-  background: #f8fbff;
+  background: #fbf9f4;
 }
 
 .poi-image-wrap {
@@ -397,7 +411,7 @@ function getMealLabel(type: Meal['type']): string {
 
 .poi-card-title,
 .meal-title {
-  color: #0f172a;
+  color: #13202f;
   font-size: 15px;
   font-weight: 700;
 }
@@ -414,7 +428,7 @@ function getMealLabel(type: Meal['type']): string {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
-  color: #2563eb;
+  color: #0f766e;
   font-size: 12px;
 }
 
@@ -425,7 +439,7 @@ function getMealLabel(type: Meal['type']): string {
 }
 
 .weather-date {
-  color: #0f172a;
+  color: #13202f;
   font-size: 15px;
   font-weight: 700;
 }
@@ -439,16 +453,56 @@ function getMealLabel(type: Meal['type']): string {
 }
 
 .weather-row strong {
-  color: #0f172a;
+  color: #13202f;
 }
 
 .weather-wind {
   margin-top: 10px;
-  color: #64748b;
+  color: #6b7280;
   font-size: 13px;
 }
 
-@media (max-width: 900px) {
+:deep(.ant-card-head) {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+:deep(.ant-card-head-title) {
+  color: #13202f;
+  font-weight: 700;
+}
+
+:deep(.ant-collapse) {
+  border: none;
+  background: transparent;
+}
+
+:deep(.ant-collapse > .ant-collapse-item) {
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+:deep(.ant-collapse > .ant-collapse-item:last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.ant-collapse > .ant-collapse-item > .ant-collapse-header) {
+  align-items: center;
+  padding: 16px 18px;
+}
+
+:deep(.ant-collapse-content) {
+  border-top: 1px solid #edf2f7;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+:deep(.ant-collapse-content > .ant-collapse-content-box) {
+  padding: 20px 18px 18px;
+}
+
+@media (max-width: 960px) {
   .summary-section {
     grid-template-columns: 1fr;
   }
@@ -456,7 +510,7 @@ function getMealLabel(type: Meal['type']): string {
 
 @media (max-width: 768px) {
   .result-page {
-    padding: 16px 12px 32px;
+    padding: 16px 12px 36px;
   }
 
   .page-toolbar {
@@ -464,8 +518,15 @@ function getMealLabel(type: Meal['type']): string {
   }
 
   .summary-main,
+  .budget-panel,
+  .side-card,
+  .content-card {
+    border-radius: 22px;
+  }
+
+  .summary-main,
   .budget-panel {
-    border-radius: 20px;
+    padding: 22px;
   }
 
   .summary-title {
