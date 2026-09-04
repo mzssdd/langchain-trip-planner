@@ -1,8 +1,9 @@
 """Unsplash图片服务"""
 
 import requests
+from typing import Dict, List, Optional
+
 from ..config import get_settings
-from typing import List,Dict,Optional
 
 class UnsplashService:
     """Unsplash图片服务类"""
@@ -12,6 +13,7 @@ class UnsplashService:
         settings = get_settings()
         self.access_key = settings.unsplash_access_key
         self.base_url = "https://api.unsplash.com"
+        self._photo_cache: Dict[str, Optional[str]] = {}
 
     def search_photos(self, query: str, per_page: int = 5) -> List[dict]:
         """
@@ -25,6 +27,9 @@ class UnsplashService:
             图片列表
         """
         try:
+            if not self.access_key:
+                return []
+
             url = f"{self.base_url}/search/photos"
             params = {
                 'query': query,
@@ -36,7 +41,7 @@ class UnsplashService:
             response.raise_for_status()
 
             data = response.json()
-            results = data.get("result",[])
+            results = data.get("results", [])
 
             #提取图片url
             photos = []
@@ -64,9 +69,17 @@ class UnsplashService:
         Returns:
             图片URL
         """
+        cache_key = query.strip().lower()
+        if cache_key in self._photo_cache:
+            return self._photo_cache[cache_key]
+
         photos = self.search_photos(query, per_page=1)
         if photos:
-            return photos[0].get("url")
+            photo_url = photos[0].get("url")
+            self._photo_cache[cache_key] = photo_url
+            return photo_url
+
+        self._photo_cache[cache_key] = None
         return None
 
 

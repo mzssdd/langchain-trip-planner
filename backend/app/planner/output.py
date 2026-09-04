@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from ..models.schemas import TripRequest, TripPlan, DayPlan, Attraction, Meal, WeatherInfo, Location
+from ..services.unsplash_service import get_unsplash_service
 from .dates import trip_date_strings, unknown_weather_row
 
 
@@ -358,13 +359,30 @@ def enrich_trip_plan_poi_details(trip_plan: TripPlan, planner_context: Dict[str,
     """
     snapshot = planner_context.get("tool_snapshot", {})
     food_pois = snapshot.get("food_pois") or []
-    if not food_pois:
-        return
+    scenic_pois = (
+        (snapshot.get("classic_pois") or [])
+        + (snapshot.get("preference_pois") or [])
+        + (snapshot.get("scenic_pois") or [])
+        + (snapshot.get("experience_pois") or [])
+    )
+    unsplash_service = get_unsplash_service()
 
     filled_meal_locations = 0
     filled_meal_addresses = 0
+    filled_attraction_images = 0
 
     for day in trip_plan.days:
+        for attraction in day.attractions:
+            if attraction.image_url:
+                continue
+
+            candidate = find_candidate_by_name(attraction.name, scenic_pois)
+            if candidate:
+                photo_url = unsplash_service.get_photo_url(attraction.name)
+                if photo_url:
+                    attraction.image_url = photo_url
+                    filled_attraction_images += 1
+
         for meal in day.meals:
             if is_lodging_breakfast_meal(meal.name, meal.type):
                 continue
@@ -388,6 +406,8 @@ def enrich_trip_plan_poi_details(trip_plan: TripPlan, planner_context: Dict[str,
             "✅ 已回填餐饮POI信息: "
             f"坐标={filled_meal_locations}, 地址={filled_meal_addresses}"
         )
+    if filled_attraction_images:
+        print(f"✅ 已回填景点Unsplash图片: {filled_attraction_images}")
 
 
 def find_candidate_by_name(name: str, candidates: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:

@@ -84,6 +84,13 @@
                       :key="`${day.day_index}-${attraction.name}`"
                       class="poi-card"
                     >
+                      <div v-if="attraction.image_url" class="poi-image-wrap">
+                        <img
+                          :src="attraction.image_url"
+                          :alt="attraction.name"
+                          class="poi-image"
+                        />
+                      </div>
                       <div class="poi-card-title">{{ attraction.name }}</div>
                       <div class="poi-card-text">{{ attraction.address }}</div>
                       <div class="poi-card-text">{{ attraction.description }}</div>
@@ -373,6 +380,19 @@ function getMealLabel(type: Meal['type']): string {
   border: 1px solid #e2e8f0;
   border-radius: 18px;
   background: #f8fbff;
+}
+
+.poi-image-wrap {
+  overflow: hidden;
+  margin-bottom: 12px;
+  border-radius: 14px;
+}
+
+.poi-image {
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
 }
 
 .poi-card-title,
