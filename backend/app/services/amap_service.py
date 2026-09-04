@@ -1,12 +1,12 @@
 """ 高德地图MCP服务封装 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from .mcp_env import build_amap_mcp_env
 from ..config import get_settings
-from ..models.schemas import Location, POIInfo, WeatherInfo
+from ..models.schemas import Location, POIInfo, RouteInfo, WeatherInfo
 from ..planner.pois import normalize_pois
 from ..planner.weather import normalize_weather
 
@@ -152,7 +152,7 @@ class AmapService:
         origin_city: Optional[str] = None,
         destination_city: Optional[str] = None,
         route_type :str = 'walking'
-    ) -> Dict[str, Any]:
+    ) -> RouteInfo:
         """
         规划路线
 
@@ -170,6 +170,13 @@ class AmapService:
             if not self.api_key:
                 raise ValueError("高德地图API Key未配置")
 
+            origin_location = self.geocode(origin_address, origin_city)
+            destination_location = self.geocode(destination_address, destination_city)
+            if not origin_location:
+                raise ValueError(f"起点地址无法解析为坐标: {origin_address}")
+            if not destination_location:
+                raise ValueError(f"终点地址无法解析为坐标: {destination_address}")
+
             if route_type == "driving":
                 path = "/direction/driving"
             elif route_type == "transit":
@@ -177,20 +184,46 @@ class AmapService:
             else:
                 path = "/direction/walking"
 
+            origin = self._format_location(origin_location)
+            destination = self._format_location(destination_location)
             params = {
-                "origin": origin_address,
-                "destination": destination_address,
+                "origin": origin,
+                "destination": destination,
                 "key": self.api_key,
             }
+            if route_type == "transit":
+                params["city"] = origin_city or destination_city
             response = httpx.get(f"{self.base_url}{path}", params=params, timeout=30)
             response.raise_for_status()
             result = response.json()
-            print(f"路线规划结果: {str(result)[:200]}...")
-            return result
+
+            if str(result.get("status")) != "1":
+                raise ValueError(
+                    f"高德路线接口返回失败: "
+                    f"status={result.get('status')}, "
+                    f"info={result.get('info')}, "
+                    f"infocode={result.get('infocode')}"
+                )
+
+            route = result.get("route") or {}
+            paths = route.get("paths") or []
+            if not paths:
+                raise ValueError("高德路线接口未返回有效路径数据")
+
+            best_path = paths[0] or {}
+            distance = float(best_path.get("distance") or 0)
+            duration = int(float(best_path.get("duration") or 0))
+
+            return RouteInfo(
+                distance=distance,
+                duration=duration,
+                route_type=route_type,
+                description=self._build_route_description(distance, duration, route_type),
+            )
 
         except Exception as e:
             print(f"❌ 路线规划失败: {str(e)}")
-            return {}
+            raise
 
     def geocode(self, address: str, city: Optional[str] = None) -> Optional[Location]:
         """
@@ -256,6 +289,21 @@ class AmapService:
         except Exception as e:
             print(f"❌ 获取POI详情失败: {str(e)}")
             return {}
+
+    def _build_route_description(
+        self,
+        distance: float,
+        duration: int,
+        route_type: str,
+    ) -> str:
+        """生成给前端展示的路线描述。"""
+        distance_km = round(distance / 1000, 1)
+        duration_min = max(1, int(round(duration / 60)))
+        return f"{route_type}路线约{distance_km}公里，预计{duration_min}分钟"
+
+    def _format_location(self, location: Location) -> str:
+        """把经纬度对象转换成高德路线接口需要的字符串。"""
+        return f"{location.longitude:.6f},{location.latitude:.6f}"
 
 #创建全局服务实例
 _amap_servicer = None
