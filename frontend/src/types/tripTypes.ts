@@ -141,4 +141,8 @@ export interface TripTaskStatusResponse {
   status: 'pending' | 'running' | 'success' | 'failed'
   data?: TripPlan
   error?: string | null
+  history?: Array<{
+    status: 'pending' | 'running' | 'success' | 'failed'
+    message: string
+  }>
 }

@@ -3,7 +3,7 @@
 import threading
 import traceback
 import uuid
-from typing import Dict, Optional, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict
 
 from fastapi import APIRouter, HTTPException
 from ...models.schemas import (
@@ -23,6 +23,7 @@ class TripTaskState(TypedDict):
     message: str
     data: Optional[dict]
     error: Optional[str]
+    history: List[Dict[str, Any]]
 
 
 tripTaskMap: Dict[str, TripTaskState] = {}
@@ -36,19 +37,35 @@ def setTripTask(taskId: str, **kwargs) -> None:
             'message': '',
             'data': None,
             'error': None,
+            'history': [],
         })
         currentTask.update(kwargs)
         tripTaskMap[taskId] = currentTask
 
 
+def appendTripTaskHistory(taskId: str, status: str, message: str) -> None:
+    with tripTaskLock:
+        currentTask = tripTaskMap.get(taskId, {
+            'status': 'pending',
+            'message': '',
+            'data': None,
+            'error': None,
+            'history': [],
+        })
+        history = list(currentTask.get('history') or [])
+        history.append({
+            'status': status,
+            'message': message,
+        })
+        currentTask['history'] = history
+        currentTask['message'] = message
+        currentTask['status'] = status
+        tripTaskMap[taskId] = currentTask
+
+
 def runTripTask(taskId: str, request: TripRequest) -> None:
     try:
-        setTripTask(
-            taskId,
-            status='running',
-            message='旅行计划生成中',
-            error=None,
-        )
+        appendTripTaskHistory(taskId, 'running', '旅行计划生成中')
 
         print(f"\n{'=' * 60}")
         print(f"📥 收到旅行规划请求:")
@@ -59,10 +76,15 @@ def runTripTask(taskId: str, request: TripRequest) -> None:
         print(f"{'=' * 60}\n")
 
         print('🔄 获取多智能体系统实例...')
+        appendTripTaskHistory(taskId, 'running', '正在获取规划器实例')
         agent = get_trip_planner_agent()
 
         print('🚀 开始生成旅行计划...')
-        tripPlan = agent.plan_trip(request)
+        appendTripTaskHistory(taskId, 'running', '开始生成旅行计划')
+        tripPlan = agent.plan_trip(
+            request,
+            progress_callback=lambda status, message: appendTripTaskHistory(taskId, status, message),
+        )
         generationStatus = getattr(agent, 'last_generation_status', 'unknown')
         generationMessage = getattr(agent, 'last_generation_message', '') or '旅行计划生成完成'
 
@@ -78,6 +100,7 @@ def runTripTask(taskId: str, request: TripRequest) -> None:
             data=tripPlan.model_dump(),
             error=None,
         )
+        appendTripTaskHistory(taskId, 'success', generationMessage)
     except Exception as error:
         print(f"❌ 生成旅行计划失败: {str(error)}")
         traceback.print_exc()
@@ -88,6 +111,7 @@ def runTripTask(taskId: str, request: TripRequest) -> None:
             error=str(error),
             data=None,
         )
+        appendTripTaskHistory(taskId, 'failed', f'生成旅行计划失败: {str(error)}')
 
 
 @router.post(
@@ -160,7 +184,9 @@ async def create_trip_plan_task(request: TripRequest):
         message='任务已创建，等待执行',
         data=None,
         error=None,
+        history=[],
     )
+    appendTripTaskHistory(taskId, 'pending', '任务已创建，等待执行')
 
     workerThread = threading.Thread(
         target=runTripTask,
@@ -201,6 +227,7 @@ async def get_trip_plan_task(task_id: str):
         status=taskInfo['status'],
         data=taskInfo['data'],
         error=taskInfo['error'],
+        history=taskInfo.get('history') or [],
     )
 
 

@@ -1,6 +1,6 @@
 """数据模型定义"""
 
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import date
 
@@ -217,6 +217,7 @@ class TripTaskStatusResponse(BaseModel):
     status: str = Field(..., description="任务状态")
     data: Optional[TripPlan] = Field(default=None, description="旅行计划数据")
     error: Optional[str] = Field(default=None, description="错误信息")
+    history: List[Dict[str, Any]] = Field(default=[], description="过程日志")
 
 
 class POIInfo(BaseModel):

@@ -2,7 +2,7 @@
 
 import os
 import time
-from typing import Dict, Any, List, Optional
+from typing import Callable, Dict, Any, List, Optional
 
 from ..services.llm_service import get_llm, get_planner_llm
 from ..config import get_settings
@@ -92,7 +92,11 @@ class MultiAgentTripPlanner:
             traceback.print_exc()
             raise
 
-    def plan_trip(self, request: TripRequest) -> TripPlan:
+    def plan_trip(
+        self,
+        request: TripRequest,
+        progress_callback: Optional[Callable[[str, str], None]] = None,
+    ) -> TripPlan:
         """
         使用多智能体协作生成旅行计划
 
@@ -104,6 +108,7 @@ class MultiAgentTripPlanner:
         """
         total_started_at = time.perf_counter()
         try:
+            self._emit_progress(progress_callback, 'running', '正在分析你的出行需求')
             print(f"\n{'='*60}")
             print(f"🚀 开始多智能体协作规划旅行...")
             print(f"目的地: {request.city}")
@@ -116,6 +121,7 @@ class MultiAgentTripPlanner:
 
             # 步骤1: 并行获取结构化工具快照
             print("📍 步骤1: 并行获取景点/天气/酒店工具快照...")
+            self._emit_progress(progress_callback, 'running', '正在收集景点、天气和酒店信息')
             step_started_at = time.perf_counter()
             planner_context = self.planner_context_builder.collect(request)
             self._log_timer("步骤1 工具快照获取", step_started_at)
@@ -124,6 +130,7 @@ class MultiAgentTripPlanner:
 
             # 步骤2: 行程规划Agent整合信息生成计划
             print("📋 步骤2: 生成行程计划...")
+            self._emit_progress(progress_callback, 'running', '正在整理候选信息并构造行程提示词')
             step_started_at = time.perf_counter()
             planner_query = build_planner_query(self.planner_context_builder, request, planner_context)
             self._log_timer("步骤2 Planner输入构造", step_started_at)
@@ -144,11 +151,13 @@ class MultiAgentTripPlanner:
                     max_attempts=PLANNER_MAX_ATTEMPTS,
                     planner_context=planner_context,
                     max_call_failures=PLANNER_PRIMARY_CALL_FAILURE_LIMIT,
+                    progress_callback=progress_callback,
                 )
             except PlannerGenerationError as parse_error:
                 if self.planner_llm is self.tool_llm:
                     raise
                 print(f"⚠️  个性化 Planner 失败，将回退到默认 LLM: {parse_error}")
+                self._emit_progress(progress_callback, 'running', '主规划器不稳定，正在切换备用模型')
                 used_planner_label = "默认 Planner"
                 trip_plan = self._generate_trip_plan_with_retries(
                     agent=self.fallback_planner_agent,
@@ -158,12 +167,14 @@ class MultiAgentTripPlanner:
                     max_attempts=PLANNER_MAX_ATTEMPTS,
                     planner_context=planner_context,
                     max_call_failures=PLANNER_FALLBACK_CALL_FAILURE_LIMIT,
+                    progress_callback=progress_callback,
                 )
                 log_preference_candidates(planner_query, request, trip_plan, parse_error.failures)
             except Exception as planner_error:
                 if self.planner_llm is self.tool_llm:
                     raise
                 print(f"⚠️  个性化 Planner 调用失败，将回退到默认 LLM: {planner_error}")
+                self._emit_progress(progress_callback, 'running', '主规划器调用失败，正在切换备用模型')
                 used_planner_label = "默认 Planner"
                 append_jsonl(
                     PLANNER_FAILURE_LOG,
@@ -186,10 +197,12 @@ class MultiAgentTripPlanner:
                     max_attempts=PLANNER_MAX_ATTEMPTS,
                     planner_context=planner_context,
                     max_call_failures=PLANNER_FALLBACK_CALL_FAILURE_LIMIT,
+                    progress_callback=progress_callback,
                 )
 
             self.last_generation_status = "llm_success"
             self.last_generation_message = f"{used_planner_label} 生成成功"
+            self._emit_progress(progress_callback, 'running', '正在整理最终行程结果')
             print(f"{'='*60}")
             print(f"✅ 旅行计划生成完成: {self.last_generation_message}")
             self._log_timer("旅行计划总耗时", total_started_at)
@@ -203,10 +216,22 @@ class MultiAgentTripPlanner:
             traceback.print_exc()
             self.last_generation_status = "fallback_success"
             self.last_generation_message = f"Planner失败，已返回fallback计划: {str(e)}"
+            self._emit_progress(progress_callback, 'failed', self.last_generation_message)
             print(f"⚠️  {self.last_generation_message}")
             self._log_timer("旅行计划总耗时", total_started_at)
             return create_fallback_plan(request)
 
+
+    def _emit_progress(
+        self,
+        progress_callback: Optional[Callable[[str, str], None]],
+        status: str,
+        message: str,
+    ) -> None:
+        if progress_callback is None:
+            return
+
+        progress_callback(status, message)
 
 
     def _log_timer(self, label: str, started_at: float) -> None:
@@ -290,6 +315,7 @@ class MultiAgentTripPlanner:
         max_attempts: int,
         planner_context: Optional[Dict[str, Any]] = None,
         max_call_failures: Optional[int] = None,
+        progress_callback: Optional[Callable[[str, str], None]] = None,
     ) -> TripPlan:
         """Generate and parse a TripPlan with clean retries.
 
@@ -320,6 +346,11 @@ class MultiAgentTripPlanner:
 
         for attempt in range(1, max_attempts + 1):
             print(f"{label} 第 {attempt}/{max_attempts} 次生成...", flush=True)
+            self._emit_progress(
+                progress_callback,
+                'running',
+                f'{label} 第 {attempt}/{max_attempts} 次生成中',
+            )
             call_started_at = time.perf_counter()
             max_output_tokens = planner_max_output_tokens(request)
             if rerank_enabled:
@@ -356,6 +387,11 @@ class MultiAgentTripPlanner:
                 failures.append(failure)
                 append_jsonl(PLANNER_FAILURE_LOG, failure)
                 print(f"⚠️  {label} 第 {attempt} 次调用失败: {error}", flush=True)
+                self._emit_progress(
+                    progress_callback,
+                    'running',
+                    f'{label} 第 {attempt} 次调用失败，正在重试',
+                )
 
                 # 400 内容风控类错误通常是服务商直接拒绝同一份输入，
                 # 干净重试也不会改变结果，立刻切到下一个兜底模型更合理。
@@ -387,6 +423,11 @@ class MultiAgentTripPlanner:
                 self._log_timer(f"{label} 第 {attempt} 次解析校验", parse_started_at)
                 if not rerank_enabled:
                     print(f"✅ {label} 第 {attempt} 次输出解析成功")
+                    self._emit_progress(
+                        progress_callback,
+                        'running',
+                        f'{label} 第 {attempt} 次结果解析成功',
+                    )
                     if failures:
                         log_preference_candidates(planner_query, request, trip_plan, failures, label)
                     return trip_plan
@@ -396,6 +437,11 @@ class MultiAgentTripPlanner:
                     f"✅ {label} 第 {attempt} 次输出解析成功，"
                     f"候选收集 {len(valid_candidates)}/{target_candidate_count}",
                     flush=True,
+                )
+                self._emit_progress(
+                    progress_callback,
+                    'running',
+                    f'{label} 已生成候选 {len(valid_candidates)}/{target_candidate_count}',
                 )
                 if len(valid_candidates) >= target_candidate_count:
                     break
@@ -414,8 +460,14 @@ class MultiAgentTripPlanner:
                 failures.append(failure)
                 append_jsonl(PLANNER_FAILURE_LOG, failure)
                 print(f"⚠️  {label} 第 {attempt} 次输出解析失败: {error}")
+                self._emit_progress(
+                    progress_callback,
+                    'running',
+                    f'{label} 第 {attempt} 次结果解析失败，正在继续生成',
+                )
 
         if valid_candidates:
+            self._emit_progress(progress_callback, 'running', f'{label} 候选生成完成，正在选择最佳结果')
             ranked_candidates = rerank_trip_plan_candidates(valid_candidates, request, planner_context)
             selected_candidate = ranked_candidates[0]
             self._print_rerank_result(label, ranked_candidates)

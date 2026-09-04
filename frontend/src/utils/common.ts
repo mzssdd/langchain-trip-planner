@@ -3,6 +3,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import type { PartyInfo } from '@/types'
 
 export const TRIP_PLAN_STORAGE_KEY = 'tripPlan'
+export const TRIP_TASK_ID_STORAGE_KEY = 'tripTaskId'
 
 export function getTravelDays(startDate: Dayjs | null, endDate: Dayjs | null): number {
   if (!startDate || !endDate) {
