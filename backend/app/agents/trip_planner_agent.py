@@ -10,6 +10,7 @@ from ..planner.context import PlannerContextBuilder
 from langchain.agents import create_agent
 from langchain.chat_models import BaseChatModel
 from .prompts import PLANNER_AGENT_PROMPT
+from .middleware import build_planner_middleware
 from .planner_query import build_planner_query, planner_max_output_tokens
 from ..planner.rerank import RerankCandidate, rerank_trip_plan_candidates
 
@@ -70,17 +71,19 @@ class MultiAgentTripPlanner:
             # 这里直接调用高德 HTTP API，拿到结构化快照后交给 Planner。
             print("  - 使用高德HTTP API获取结构化工具快照...")
 
-            # 创建行程规划Agent(不需要工具)
+            # 创建行程规划Agent(不需要工具)。主/备用 Agent 使用同一套治理中间件。
             print("  - 创建行程规划Agent...")
             self.planner_agent = create_agent(
                 name="行程规划专家",
-                model = self.planner_llm,
-                system_prompt=PLANNER_AGENT_PROMPT
+                model=self.planner_llm,
+                system_prompt=PLANNER_AGENT_PROMPT,
+                middleware=build_planner_middleware(),
             )
             self.fallback_planner_agent = create_agent(
                 name="默认行程规划专家",
                 model=self.tool_llm,
-                system_prompt=PLANNER_AGENT_PROMPT
+                system_prompt=PLANNER_AGENT_PROMPT,
+                middleware=build_planner_middleware(),
             )
             print(f"✅ 多智能体系统初始化成功")
             print(f"   工具查询: 高德HTTP API(景点/天气/酒店并行)")

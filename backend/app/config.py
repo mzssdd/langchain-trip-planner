@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     unsplash_secret_key: str = ""  # 请在.env文件中设置Unsplash Secret Key
 
     #LLM配置(环境变量读取)
-    openai_api_key: str = "sk-75d6c2ab09634c38af26b2ea556c758b"
+    openai_api_key: str = ""
     openai_base_url: str = "https://api.deepseek.com"
     openai_model: str = "deepseek-v4-flash"
     openai_provider: str = "deepseek"
