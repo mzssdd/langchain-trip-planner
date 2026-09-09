@@ -7,6 +7,7 @@
       <a-tag :color="healthTagColor">{{ healthText }}</a-tag>
     </div>
 
+    <div class="request-layout">
     <a-card :bordered="false" class="planner-card">
       <div class="planner-header">
         <div>
@@ -254,6 +255,19 @@
 
       </a-form>
     </a-card>
+
+    <aside class="request-aside">
+      <div class="aside-kicker">YOUR ROUTE BRIEF</div>
+      <h2>先定方向，<br />再让路线成形。</h2>
+      <div class="aside-summary">
+        <div><span>目的地</span><strong>{{ formState.city || '尚未选择' }}</strong></div>
+        <div><span>出行天数</span><strong>{{ formState.travel_days }} 天</strong></div>
+        <div><span>同行人数</span><strong>{{ formState.party.total }} 人</strong></div>
+        <div><span>预算档位</span><strong>{{ budgetLevelList.find(item => item.value === formState.budget_constraint.budget_level)?.label }}</strong></div>
+      </div>
+      <div class="aside-note"><span>✦</span> 填写越具体，生成的路线越贴近你的旅行节奏。</div>
+    </aside>
+    </div>
   </div>
 </template>
 
@@ -664,4 +678,23 @@ async function handleSubmit() {
     width: 100%;
   }
 }
+.request-page { max-width: 1180px; padding-top: 24px; }
+.page-toolbar { margin-bottom: 18px; }
+.page-toolbar .ant-btn { background: var(--surface); }
+.request-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 18px; align-items: start; }
+.planner-card { min-width: 0; border: 1px solid var(--mist); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-md); }
+.planner-header { padding-bottom: 20px; border-bottom: 1px solid var(--mist); }
+.planner-kicker { color: var(--signal); letter-spacing: .12em; }
+.planner-title { color: var(--ink); letter-spacing: -.04em; }
+.planner-badge { border: 1px solid rgba(242,107,56,.3); border-radius: 999px; background: rgba(242,107,56,.08); color: var(--signal-dark); }
+.form-section { padding: 24px 0; border-bottom: 1px solid var(--mist); }
+.section-title { color: var(--tide); font-weight: 750; letter-spacing: -.01em; }
+.preference-group .ant-checkbox-wrapper { border: 1px solid var(--mist); border-radius: 7px; background: var(--surface-muted); }
+.submit-area { border-top: 1px solid var(--mist); }
+.submit-button { border-radius: 8px; background: var(--signal); box-shadow: 0 8px 18px rgba(242,107,56,.2); }
+.request-aside { position: sticky; top: 94px; padding: 25px 22px; border: 1px solid var(--mist); border-radius: var(--radius-lg); background: var(--ink); color: #fff; box-shadow: var(--shadow-sm); overflow: hidden; }
+.request-aside::after { content: ''; position: absolute; width: 180px; height: 180px; right: -100px; bottom: -90px; border: 1px solid rgba(242,107,56,.45); border-radius: 50%; box-shadow: 0 0 0 22px rgba(242,107,56,.08); }
+.request-aside > * { position: relative; z-index: 1; }.aside-kicker { color: var(--signal); font-size: 10px; letter-spacing: .12em; }.request-aside h2 { margin: 12px 0 28px; color: #fff; font-size: 24px; line-height: 1.3; letter-spacing: -.04em; }.aside-summary { border-top: 1px solid rgba(255,255,255,.16); }.aside-summary div { display: flex; justify-content: space-between; gap: 8px; padding: 13px 0; border-bottom: 1px solid rgba(255,255,255,.12); }.aside-summary span { color: rgba(255,255,255,.55); font-size: 12px; }.aside-summary strong { color: #fff; font-size: 13px; }.aside-note { margin-top: 22px; color: rgba(255,255,255,.62); font-size: 12px; line-height: 1.7; }.aside-note span { margin-right: 6px; color: var(--signal); }
+@media (max-width: 900px) { .request-layout { grid-template-columns: 1fr; }.request-aside { position: static; order: -1; }.aside-summary { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 0; }.aside-summary div { display: block; border-top: 1px solid rgba(255,255,255,.12); border-bottom: 0; }.aside-summary strong { display: block; margin-top: 6px; } }
+@media (max-width: 560px) { .aside-summary { grid-template-columns: repeat(2, 1fr); } }
 </style>

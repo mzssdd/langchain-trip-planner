@@ -542,4 +542,19 @@ function getMealLabel(type: Meal['type']): string {
     gap: 4px;
   }
 }
+.result-page { max-width: 1180px; padding-top: 24px; }
+.page-toolbar { margin-bottom: 18px; }
+.summary-section { gap: 24px; }
+.summary-main { border-radius: var(--radius-lg); background: var(--ink); box-shadow: var(--shadow-md); }
+.summary-kicker { color: var(--signal); letter-spacing: .12em; }
+.summary-title { letter-spacing: -.045em; }
+.summary-description, .summary-advice { color: rgba(255,255,255,.72); }
+.budget-panel { border-radius: var(--radius-md); background: var(--signal); color: #fff; }
+.budget-panel-title, .budget-item span { color: rgba(255,255,255,.74); }
+.budget-total, .budget-item strong { color: #fff; }
+.side-card, .content-card { border-color: var(--mist); background: var(--surface); box-shadow: var(--shadow-sm); }
+.weather-card, .poi-card, .hotel-card { border-color: var(--mist); border-radius: 10px; background: var(--surface-muted); }
+.section-subtitle { color: var(--tide); }
+.day-header-title, .poi-card-title, .meal-title, .info-value { color: var(--ink); }
+.info-label, .day-header-date, .poi-card-text { color: var(--slate); }
 </style>

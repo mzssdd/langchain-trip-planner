@@ -6,15 +6,21 @@
     <a-layout-header class="app-header">
       <div class="app-shell">
         <div class="app-brand">
-          <span class="brand-mark">T</span>
+          <span class="brand-mark"><i></i><i></i><i></i></span>
           <div class="brand-copy">
-            <div class="brand-title">LangChain 智能旅行助手</div>
+            <div class="brand-title">Tripline</div>
+            <div class="brand-subtitle">智能旅行规划</div>
           </div>
+        </div>
+
+        <div class="app-header-context">
+          <span class="context-line"></span>
+          <span>从想法到可执行路线</span>
         </div>
 
         <div class="app-header-pill">
           <span class="pill-dot"></span>
-          <span class="pill-text">AI 行程规划体验</span>
+          <span class="pill-text">规划服务在线</span>
         </div>
       </div>
     </a-layout-header>
@@ -38,7 +44,7 @@
 .app-layout {
   position: relative;
   min-height: 100vh;
-  padding-top: 20px;
+  padding-top: 16px;
   overflow: hidden;
 }
 
@@ -51,38 +57,35 @@
 }
 
 .app-backdrop--left {
-  top: -120px;
-  left: -120px;
-  width: 320px;
-  height: 320px;
+  top: -160px;
+  left: -100px;
+  width: 280px;
+  height: 280px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.18), transparent 72%);
+  background: radial-gradient(circle, rgba(242, 107, 56, 0.14), transparent 72%);
 }
 
 .app-backdrop--right {
-  top: 160px;
-  right: -140px;
-  width: 380px;
-  height: 380px;
+  top: 180px;
+  right: -180px;
+  width: 360px;
+  height: 360px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.16), transparent 70%);
+  background: radial-gradient(circle, rgba(23, 107, 135, 0.12), transparent 70%);
 }
 
 .app-header {
   position: fixed;
-  top: 20px;
-  left: 50%;
+  top: 0;
+  left: 0;
   z-index: 10;
-  width: calc(100% - 40px);
-  max-width: 1240px;
-  height: 64px;
-  transform: translateX(-50%);
+  width: 100%;
+  height: 72px;
   padding: 0;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 20px;
-  background: rgba(252, 249, 244, 0.82);
-  box-shadow: 0 16px 40px rgba(31, 41, 55, 0.12);
-  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--mist);
+  background: rgba(245, 247, 244, 0.94);
+  box-shadow: 0 2px 16px rgba(16, 42, 67, 0.04);
+  backdrop-filter: blur(14px);
 }
 
 .app-shell {
@@ -112,29 +115,62 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   width: 34px;
   height: 34px;
-  border-radius: 11px;
-  background: linear-gradient(135deg, #0f766e 0%, #f59e0b 100%);
-  color: #fffaf0;
-  font-size: 16px;
-  font-weight: 700;
-  box-shadow: 0 10px 22px rgba(15, 118, 110, 0.2);
+  border: 2px solid var(--signal);
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 4px 4px 0 rgba(242, 107, 56, 0.18);
 }
 
+.brand-mark i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+
+.brand-mark i:nth-child(1) { top: 7px; left: 8px; }
+.brand-mark i:nth-child(2) { top: 15px; left: 18px; }
+.brand-mark i:nth-child(3) { top: 22px; left: 9px; }
+
 .brand-title {
-  color: #13202f;
+  color: var(--ink);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 750;
+  letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
+.brand-title span {
+  color: var(--slate);
+  font-weight: 600;
+}
+
 .brand-subtitle {
-  margin-top: 1px;
-  color: #6b7280;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.app-header-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  margin-right: 24px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.context-line {
+  display: inline-block;
+  width: 28px;
+  height: 1px;
+  background: var(--signal);
 }
 
 .app-header-pill {
@@ -143,10 +179,10 @@
   gap: 7px;
   margin: 1px;
   padding: 0px 12px;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid rgba(23, 107, 135, 0.18);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.52);
-  color: #0f766e;
+  background: var(--surface-muted);
+  color: var(--tide);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -164,7 +200,7 @@
 .app-content {
   position: relative;
   z-index: 1;
-  padding: 84px 0 0;
+  padding: 96px 0 0;
 }
 
 .app-content-shell {
@@ -186,17 +222,24 @@
 
 @media (max-width: 768px) {
   .app-layout {
-    padding-top: 12px;
+    padding-top: 0;
   }
 
   .app-shell {
-    padding: 0 14px;
+    padding: 0 18px;
   }
 
   .app-header {
-    top: 12px;
-    width: calc(100% - 24px);
-    border-radius: 16px;
+    top: 0;
+    height: 64px;
+  }
+
+  .app-content {
+    padding-top: 82px;
+  }
+
+  .app-header-context {
+    display: none;
   }
 
   .brand-subtitle {

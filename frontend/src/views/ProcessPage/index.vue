@@ -321,4 +321,14 @@ function getHistoryStatusLabel(status: 'pending' | 'running' | 'success' | 'fail
     flex-direction: column;
   }
 }
+.process-page { max-width: 1180px; padding-top: 24px; }
+.page-toolbar { margin-bottom: 18px; }
+.process-card { border: 1px solid var(--mist); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-md); }
+.process-header { padding-bottom: 20px; border-bottom: 1px solid var(--mist); }
+.process-kicker { color: var(--signal); letter-spacing: .12em; }
+.process-title { color: var(--ink); letter-spacing: -.04em; }
+.process-badge { border-color: rgba(23,107,135,.22); background: rgba(23,107,135,.08); color: var(--tide); }
+.status-panel, .timeline-panel { border: 1px solid var(--mist); border-radius: var(--radius-md); background: var(--surface-muted); }
+.timeline-dot { background: var(--signal); box-shadow: 0 0 0 4px rgba(242,107,56,.14); }
+.timeline-status { color: var(--tide); }
 </style>

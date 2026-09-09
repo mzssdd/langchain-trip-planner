@@ -187,3 +187,6 @@ lightning_logs/
 /training/scripts/planner/bestofn/run_260512_anti_leak1200_wait_gpu01.sh
 # Local Codex helper skill, not part of the public project.
 /skills/trip-planner-model-eval/
+
+
+/.zcode

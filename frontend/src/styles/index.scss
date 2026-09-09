@@ -1,3 +1,24 @@
+:root {
+  --ink: #102a43;
+  --ink-soft: #1f425d;
+  --tide: #176b87;
+  --signal: #f26b38;
+  --signal-dark: #d95427;
+  --canvas: #f5f7f4;
+  --surface: #ffffff;
+  --surface-muted: #eef3f2;
+  --mist: #d9e2e7;
+  --slate: #486273;
+  --muted: #6f8490;
+  --success: #16826a;
+  --danger: #c2413a;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 2px 10px rgba(16, 42, 67, 0.06);
+  --shadow-md: 0 16px 38px rgba(16, 42, 67, 0.11);
+}
+
 html,
 body,
 #app {
@@ -6,27 +27,24 @@ body,
 }
 
 html {
-  background: #f2efe8;
+  background: var(--canvas);
 }
 
 body {
-  color: #1d2433;
-  font-family:
-    'Inter',
-    'PingFang SC',
-    'Hiragino Sans GB',
-    'Microsoft YaHei',
-    sans-serif;
+  color: var(--ink);
+  font-family: 'DM Sans', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background:
-    radial-gradient(circle at top, rgba(244, 164, 96, 0.16), transparent 28%),
-    radial-gradient(circle at 85% 15%, rgba(59, 130, 246, 0.14), transparent 25%),
-    linear-gradient(180deg, #f8f4ed 0%, #f2efe8 100%);
+    linear-gradient(rgba(217, 226, 231, 0.32) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(217, 226, 231, 0.32) 1px, transparent 1px),
+    radial-gradient(circle at 82% 4%, rgba(242, 107, 56, 0.12), transparent 22%),
+    var(--canvas);
+  background-size: 42px 42px, 42px 42px, auto, auto;
   background-attachment: fixed;
 }
 
 ::selection {
-  background: rgba(15, 118, 110, 0.2);
-  color: #10211f;
+  background: rgba(242, 107, 56, 0.24);
+  color: var(--ink);
 }
 
 body,
@@ -34,14 +52,100 @@ button,
 input,
 textarea,
 select {
-  font-family:
-    'Inter',
-    'PingFang SC',
-    'Hiragino Sans GB',
-    'Microsoft YaHei',
-    sans-serif;
+  font-family: inherit;
 }
 
 * {
   box-sizing: border-box;
+}
+
+button,
+a,
+.ant-btn,
+.ant-input,
+.ant-select-selector,
+.ant-picker,
+.ant-input-number {
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+:where(button, a, .ant-btn, input, textarea, .ant-select-selector, .ant-picker, .ant-input-number):focus-visible {
+  outline: 3px solid rgba(242, 107, 56, 0.28);
+  outline-offset: 2px;
+}
+
+.ant-btn {
+  border-radius: var(--radius-sm);
+  border-color: var(--mist);
+  color: var(--ink);
+  font-weight: 650;
+  box-shadow: none;
+}
+
+.ant-btn-primary {
+  border-color: var(--signal);
+  background: var(--signal);
+  color: #fff;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  border-color: var(--signal-dark) !important;
+  background: var(--signal-dark) !important;
+}
+
+.ant-input,
+.ant-input-number,
+.ant-picker,
+.ant-select-selector {
+  border-radius: var(--radius-sm) !important;
+  border-color: var(--mist) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.ant-input:hover,
+.ant-input:focus,
+.ant-input-number:hover,
+.ant-picker:hover,
+.ant-select-focused .ant-select-selector,
+.ant-select-selector:hover {
+  border-color: var(--tide) !important;
+}
+
+.ant-card {
+  border: 1px solid var(--mist);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.ant-tag {
+  border-radius: 999px;
+  font-weight: 650;
+}
+
+.ant-collapse {
+  border: 1px solid var(--mist) !important;
+  border-radius: var(--radius-md) !important;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.ant-collapse-item {
+  border-color: var(--mist) !important;
+}
+
+.ant-collapse-header {
+  color: var(--ink) !important;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
