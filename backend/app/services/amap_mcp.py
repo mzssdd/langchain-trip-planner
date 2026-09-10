@@ -45,6 +45,26 @@ class AmapMcpClient:
         tools = await self.client.get_tools()
         return [tool.name for tool in tools]
 
+    def geocode_location(
+        self,
+        address: str,
+        city: str | None = None,
+    ) -> Dict[str, float] | None:
+        """通过高德 MCP 将地址转换为经纬度。"""
+        arguments: Dict[str, Any] = {"address": address}
+        if city:
+            arguments["city"] = city
+        data = self.call(("maps_geo",), arguments)
+        rows = data.get("return") or data.get("geocodes") or []
+        if not rows:
+            return None
+
+        location = rows[0].get("location", "")
+        if not location or "," not in location:
+            return None
+        longitude, latitude = location.split(",", 1)
+        return {"longitude": float(longitude), "latitude": float(latitude)}
+
     async def _call(self, tool_names: Iterable[str], arguments: Dict[str, Any]) -> Any:
         tools = await self.client.get_tools()
         requested_names = tuple(tool_names)

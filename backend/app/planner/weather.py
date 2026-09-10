@@ -12,8 +12,10 @@ def normalize_weather(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not forecasts:
         return []
 
+    first_forecast = forecasts[0] if isinstance(forecasts[0], dict) else {}
+    casts = first_forecast.get("casts") or forecasts
     rows = []
-    for item in forecasts[0].get("casts", []):
+    for item in casts:
         rows.append(
             {
                 "date": item.get("date", ""),

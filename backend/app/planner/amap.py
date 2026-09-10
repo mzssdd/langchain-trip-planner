@@ -77,6 +77,8 @@ class AmapPlannerClient:
                 self._wait_for_amap_slot()
                 tool_names, tool_params = self._mcp_request(path, query_params)
                 data = self.mcp_client.call(tool_names, tool_params)
+                if not isinstance(data, dict):
+                    raise RuntimeError(f"高德 MCP 返回格式错误: {type(data).__name__}")
                 if data.get("status") == "0":
                     raise RuntimeError(f"高德API错误: {data.get('info')} ({data.get('infocode')})")
                 self._write_cache(
@@ -129,13 +131,32 @@ class AmapPlannerClient:
                     "page": 1,
                 },
             )
-            normalized = normalize_pois(raw, keyword, source_role, require_location, source_bucket)
+            normalized = normalize_pois(raw, keyword, source_role, False, source_bucket)
+            normalized = self._enrich_locations(normalized, city)
+            if require_location:
+                normalized = [item for item in normalized if item.get("location")]
             normalized = filter_pois(normalized, source_role)
             normalized = rank_pois(normalized, source_role)
             rows.extend(normalized[:PLANNER_CONTEXT_PER_KEYWORD_LIMIT])
         rows = dedupe_pois(rows)
         rows = rank_pois(rows, source_role)
         return rows[:limit]
+
+    def _enrich_locations(
+        self,
+        rows: List[Dict[str, Any]],
+        city: str,
+    ) -> List[Dict[str, Any]]:
+        """用 MCP 地理编码补齐文本搜索结果缺失的坐标。"""
+        for row in rows:
+            if row.get("location") or not row.get("address"):
+                continue
+            try:
+                row["location"] = self.mcp_client.geocode_location(row["address"], city)
+            except Exception as exc:
+                if PLANNER_CONTEXT_CACHE_VERBOSE:
+                    print(f"  - POI坐标补齐失败: {row.get('name')}: {exc}")
+        return rows
 
     def search_classic_pois(self, city: str, keywords: List[str], limit: int) -> List[Dict[str, Any]]:
         """查询城市经典景点；这部分和用户无关，适合长 TTL 本地缓存。"""

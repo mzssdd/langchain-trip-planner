@@ -54,18 +54,22 @@ class AmapService:
                     "page": 1,
                 },
             )
-            pois = normalize_pois(raw, keywords, "scenic", True, "api")
+            pois = normalize_pois(raw, keywords, "scenic", False, "mcp")
             return [
                 POIInfo(
                     id=item.get("id", ""),
                     name=item.get("name", ""),
                     type=item.get("type", ""),
                     address=item.get("address", ""),
-                    location=Location(**item["location"]),
+                    location=Location(**location),
                     tel=None,
                 )
                 for item in pois
-                if item.get("location")
+                for location in [
+                    item.get("location")
+                    or self.mcp_tool.geocode_location(item.get("address", ""), city)
+                ]
+                if location
             ]
         
         except Exception as e:
@@ -146,28 +150,28 @@ class AmapService:
                 {
                     "origin": origin,
                     "destination": destination,
-                    "route_type": route_type,
-                    "strategy": self._route_strategy(route_type),
-                    "city": origin_city or destination_city,
+                    "city": origin_city or destination_city or "",
+                    "cityd": destination_city or origin_city or "",
                 },
             )
 
-            if str(result.get("status")) != "1":
-                raise ValueError(
-                    f"高德路线接口返回失败: "
-                    f"status={result.get('status')}, "
-                    f"info={result.get('info')}, "
-                    f"infocode={result.get('infocode')}"
-                )
-
             route = result.get("route") or {}
-            paths = route.get("paths") or []
-            if not paths:
-                raise ValueError("高德路线接口未返回有效路径数据")
+            if not route:
+                raise ValueError(f"高德路线 MCP 返回失败: {result}")
 
-            best_path = paths[0] or {}
-            distance = float(best_path.get("distance") or 0)
-            duration = int(float(best_path.get("duration") or 0))
+            if route_type == "transit":
+                transits = route.get("transits") or []
+                if not transits:
+                    raise ValueError("高德公交 MCP 未返回有效路径数据")
+                distance = float(route.get("distance") or 0)
+                duration = int(float(transits[0].get("duration") or 0))
+            else:
+                paths = route.get("paths") or []
+                if not paths:
+                    raise ValueError("高德路线 MCP 未返回有效路径数据")
+                best_path = paths[0] or {}
+                distance = float(best_path.get("distance") or 0)
+                duration = int(float(best_path.get("duration") or 0))
 
             return RouteInfo(
                 distance=distance,
@@ -195,20 +199,10 @@ class AmapService:
             if not self.api_key:
                 raise ValueError("高德地图API Key未配置")
 
-            params = {"address": address}
-            if city:
-                params["city"] = city
-            data = self.mcp_tool.call(("maps_geo", "geo", "geocode"), params)
-            geocodes = data.get("geocodes") or []
-            if not geocodes:
+            location = self.mcp_tool.geocode_location(address, city)
+            if not location:
                 return None
-
-            location = geocodes[0].get("location", "")
-            if not location or "," not in location:
-                return None
-
-            longitude, latitude = location.split(",", 1)
-            return Location(longitude=float(longitude), latitude=float(latitude))
+            return Location(**location)
 
         except Exception as e:
             print(f"❌ 地理编码失败: {str(e)}")
@@ -254,13 +248,6 @@ class AmapService:
         """把经纬度对象转换成高德路线接口需要的字符串。"""
         return f"{location.longitude:.6f},{location.latitude:.6f}"
 
-    def _route_strategy(self, route_type: str) -> int:
-        """把接口的路线类型转换为高德 MCP 的驾车策略参数。"""
-        if route_type == "driving":
-            return 0
-        if route_type == "transit":
-            return 1
-        return 2
 
 #创建全局服务实例
 _amap_servicer = None

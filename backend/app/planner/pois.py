@@ -506,16 +506,19 @@ def normalize_pois(
     rows = []
     for poi in raw.get("pois", []):
         location = parse_location(poi.get("location"))
+        poi_type = poi.get("type", "")
         if require_location and not location:
             continue
         biz_ext = poi.get("biz_ext") or {}
         photos = poi.get("photos") or []
+        if isinstance(photos, dict):
+            photos = [photos]
         photo_urls = [photo.get("url") for photo in photos if photo.get("url")]
         rows.append(
             {
                 "id": poi.get("id", ""),
                 "name": poi.get("name", ""),
-                "type": poi.get("type", ""),
+                "type": poi_type,
                 "typecode": poi.get("typecode", ""),
                 "address": poi.get("address") if isinstance(poi.get("address"), str) else "",
                 "location": location,
@@ -528,6 +531,7 @@ def normalize_pois(
                 "source_keyword": source_keyword,
                 "source_role": source_role,
                 "source_bucket": source_bucket or source_role,
+                "source_format": "mcp" if not poi_type else "amap",
             }
         )
     return rows
@@ -555,6 +559,9 @@ def is_noise_poi(row: Dict[str, Any], source_role: str) -> bool:
     if source_role in {"scenic", "experience"}:
         if any(keyword in text for keyword in POI_NOISE_KEYWORDS):
             return True
+
+    if row.get("source_format") == "mcp" and not poi_type:
+        return False
 
     if source_role == "scenic":
         return not contains_any(poi_type, SCENIC_ALLOWED_TYPE_KEYWORDS)
