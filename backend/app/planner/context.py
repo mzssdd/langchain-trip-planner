@@ -86,7 +86,7 @@ class PlannerContextBuilder:
 
         # 当前主线不生成粗糙路线 hint：直接把酒店/景点/餐饮候选的
         # address、district 和 location 交给 Planner 判断动线。
-        # 真正的路线时间增强后续应接入地图路线 API，并配套缓存和校验。
+        # 真正的路线时间增强后续应接入地图 MCP，并配套缓存和校验。
         context["tool_snapshot"]["route_hints"] = []
         context["tool_snapshot"]["tool_status"]["routes"] = self._tool_status(
             True,

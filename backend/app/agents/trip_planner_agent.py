@@ -68,8 +68,8 @@ class MultiAgentTripPlanner:
             self.llm = self.tool_llm
 
             # 后端不再让工具 Agent 先写自然语言摘要。
-            # 这里直接调用高德 HTTP API，拿到结构化快照后交给 Planner。
-            print("  - 使用高德HTTP API获取结构化工具快照...")
+            # 这里直接调用高德 MCP，拿到结构化快照后交给 Planner。
+            print("  - 使用高德 MCP 获取结构化工具快照...")
 
             # 创建行程规划Agent(不需要工具)。主/备用 Agent 使用同一套治理中间件。
             print("  - 创建行程规划Agent...")
@@ -86,7 +86,7 @@ class MultiAgentTripPlanner:
                 middleware=build_planner_middleware(),
             )
             print(f"✅ 多智能体系统初始化成功")
-            print(f"   工具查询: 高德HTTP API(景点/天气/酒店并行)")
+            print(f"   工具查询: 高德 MCP(景点/天气/酒店并行)")
             print(f"   Planner模型: {'个性化模型' if self.planner_llm is not self.tool_llm else '默认模型'}")
 
         except Exception as e:

@@ -8,13 +8,10 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import httpx
-
+from ..services.amap_mcp import get_amap_mcp_client
 from .pois import dedupe_pois, filter_pois, normalize_pois, rank_pois
 
 
-AMAP_BASE_URL = "https://restapi.amap.com/v3"
-AMAP_HTTP_TIMEOUT = int(os.getenv("AMAP_HTTP_TIMEOUT", "30"))
 AMAP_SEARCH_OFFSET = int(os.getenv("AMAP_SEARCH_OFFSET", "20"))
 PLANNER_CONTEXT_PER_KEYWORD_LIMIT = int(os.getenv("PLANNER_CONTEXT_PER_KEYWORD_LIMIT", "5"))
 PLANNER_CONTEXT_CACHE_DIR = Path(
@@ -55,9 +52,10 @@ class AmapPlannerClient:
     def __init__(self, api_key: str, cache_dir: Path = PLANNER_CONTEXT_CACHE_DIR):
         self.api_key = api_key
         self.cache_dir = self._resolve_cache_dir(cache_dir)
+        self.mcp_client = get_amap_mcp_client()
 
     def get(self, path: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        """调用高德HTTP API，并在入口统一做缓存和限速。"""
+        """调用高德 MCP 工具，并在入口统一做缓存和限速。"""
         if not self.api_key:
             raise ValueError("AMAP_API_KEY未配置")
 
@@ -73,14 +71,12 @@ class AmapPlannerClient:
                 print(f"  - amap缓存命中: {path} {self._cache_label(query_params)}")
             return cached
 
-        request_params = {**query_params, "key": self.api_key}
         last_exc: Optional[Exception] = None
         for attempt in range(3):
             try:
                 self._wait_for_amap_slot()
-                response = httpx.get(f"{AMAP_BASE_URL}{path}", params=request_params, timeout=AMAP_HTTP_TIMEOUT)
-                response.raise_for_status()
-                data = response.json()
+                tool_names, tool_params = self._mcp_request(path, query_params)
+                data = self.mcp_client.call(tool_names, tool_params)
                 if data.get("status") == "0":
                     raise RuntimeError(f"高德API错误: {data.get('info')} ({data.get('infocode')})")
                 self._write_cache(
@@ -95,6 +91,20 @@ class AmapPlannerClient:
                 last_exc = exc
                 time.sleep(0.5 + attempt)
         raise RuntimeError(f"高德API请求失败: {last_exc}") from last_exc
+
+    def _mcp_request(
+        self,
+        path: str,
+        params: Dict[str, Any],
+    ) -> tuple[tuple[str, ...], Dict[str, Any]]:
+        """把原高德 REST 路径映射为高德 MCP 工具及参数。"""
+        if path == "/place/text":
+            return ("maps_text_search", "text_search"), params
+        if path == "/weather/weatherInfo":
+            return ("maps_weather", "weather"), params
+        if path == "/geocode/geo":
+            return ("maps_geo", "geo", "geocode"), params
+        raise ValueError(f"未配置 MCP 路径映射: {path}")
 
     def search_keywords(
         self,

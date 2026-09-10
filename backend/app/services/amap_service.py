@@ -2,18 +2,14 @@
 
 from typing import Any, Dict, List, Optional
 
-import httpx
-from langchain_mcp_adapters.client import MultiServerMCPClient
-from .mcp_env import build_amap_mcp_env
 from ..config import get_settings
 from ..models.schemas import Location, POIInfo, RouteInfo, WeatherInfo
 from ..planner.pois import normalize_pois
 from ..planner.weather import normalize_weather
+from .amap_mcp import AmapMcpClient, get_amap_mcp_client
 
 #全局mcp工具实例
-_amap_mcp_tool = None
-
-def get_amap_map_tool() -> MultiServerMCPClient:
+def get_amap_map_tool() -> AmapMcpClient:
     """
     获取高德地图MCP工具实例(单例模式)
 
@@ -21,37 +17,7 @@ def get_amap_map_tool() -> MultiServerMCPClient:
         MCPTool实例
     """
 
-    global _amap_mcp_tool
-
-    if _amap_mcp_tool is None:
-        settings = get_settings()
-
-        if not settings.amap_api_key:
-            raise ValueError("高德地图API Key未配置,请在.env文件中设置AMAP_API_KEY")
-
-        #创建MCP工具
-        _amap_mcp_tool = MultiServerMCPClient(
-            {
-              "amap-maps": {
-                "transport":"stdio",
-                "args": [
-                  "-y",
-                  "@amap/amap-maps-mcp-server"
-                ],
-                "command": "npx",
-                "env": {
-                  "AMAP_MAPS_API_KEY": settings.amap_api_key
-                }
-              }
-            }
-        )
-
-    return _amap_mcp_tool
-
-
-# async def get_amap_tools() -> list[BaseTool]:
-#     client = get_amap_map_tool()
-#     return await client.get_tools()
+    return get_amap_mcp_client()
 
 class AmapService:
     """高德地图服务封装类"""
@@ -60,7 +26,6 @@ class AmapService:
         settings = get_settings()
         self.api_key = settings.amap_api_key
         self.mcp_tool = get_amap_map_tool()
-        self.base_url = "https://restapi.amap.com/v3"
 
     def search_poi(self, keywords:str, city:str, citylimit:bool = True) -> List[POIInfo]:
         """
@@ -78,21 +43,17 @@ class AmapService:
             if not self.api_key:
                 raise ValueError("高德地图API Key未配置")
 
-            response = httpx.get(
-                f"{self.base_url}/place/text",
-                params={
+            raw = self.mcp_tool.call(
+                ("maps_text_search", "text_search"),
+                {
                     "keywords": keywords,
                     "city": city,
                     "citylimit": str(citylimit).lower(),
                     "extensions": "all",
                     "offset": 20,
                     "page": 1,
-                    "key": self.api_key,
                 },
-                timeout=30,
             )
-            response.raise_for_status()
-            raw = response.json()
             pois = normalize_pois(raw, keywords, "scenic", True, "api")
             return [
                 POIInfo(
@@ -125,17 +86,13 @@ class AmapService:
             if not self.api_key:
                 raise ValueError("高德地图API Key未配置")
 
-            response = httpx.get(
-                f"{self.base_url}/weather/weatherInfo",
-                params={
+            raw = self.mcp_tool.call(
+                ("maps_weather", "weather"),
+                {
                     "city": city,
                     "extensions": "all",
-                    "key": self.api_key,
                 },
-                timeout=30,
             )
-            response.raise_for_status()
-            raw = response.json()
             return [
                 WeatherInfo(**item)
                 for item in normalize_weather(raw)
@@ -177,25 +134,23 @@ class AmapService:
             if not destination_location:
                 raise ValueError(f"终点地址无法解析为坐标: {destination_address}")
 
-            if route_type == "driving":
-                path = "/direction/driving"
-            elif route_type == "transit":
-                path = "/direction/transit/integrated"
-            else:
-                path = "/direction/walking"
-
             origin = self._format_location(origin_location)
             destination = self._format_location(destination_location)
-            params = {
-                "origin": origin,
-                "destination": destination,
-                "key": self.api_key,
+            direction_tool_names = {
+                "walking": ("maps_direction_walking",),
+                "driving": ("maps_direction_driving",),
+                "transit": ("maps_direction_transit_integrated",),
             }
-            if route_type == "transit":
-                params["city"] = origin_city or destination_city
-            response = httpx.get(f"{self.base_url}{path}", params=params, timeout=30)
-            response.raise_for_status()
-            result = response.json()
+            result = self.mcp_tool.call(
+                direction_tool_names.get(route_type, direction_tool_names["walking"]),
+                {
+                    "origin": origin,
+                    "destination": destination,
+                    "route_type": route_type,
+                    "strategy": self._route_strategy(route_type),
+                    "city": origin_city or destination_city,
+                },
+            )
 
             if str(result.get("status")) != "1":
                 raise ValueError(
@@ -240,13 +195,10 @@ class AmapService:
             if not self.api_key:
                 raise ValueError("高德地图API Key未配置")
 
-            params = {"address": address, "key": self.api_key}
+            params = {"address": address}
             if city:
                 params["city"] = city
-
-            response = httpx.get(f"{self.base_url}/geocode/geo", params=params, timeout=30)
-            response.raise_for_status()
-            data = response.json()
+            data = self.mcp_tool.call(("maps_geo", "geo", "geocode"), params)
             geocodes = data.get("geocodes") or []
             if not geocodes:
                 return None
@@ -276,13 +228,10 @@ class AmapService:
             if not self.api_key:
                 raise ValueError("高德地图API Key未配置")
 
-            response = httpx.get(
-                f"{self.base_url}/place/detail",
-                params={"id": poi_id, "key": self.api_key},
-                timeout=30,
+            data = self.mcp_tool.call(
+                ("maps_search_detail",),
+                {"id": poi_id},
             )
-            response.raise_for_status()
-            data = response.json()
             print(f"POI详情结果: {str(data)[:200]}...")
             return data
 
@@ -304,6 +253,14 @@ class AmapService:
     def _format_location(self, location: Location) -> str:
         """把经纬度对象转换成高德路线接口需要的字符串。"""
         return f"{location.longitude:.6f},{location.latitude:.6f}"
+
+    def _route_strategy(self, route_type: str) -> int:
+        """把接口的路线类型转换为高德 MCP 的驾车策略参数。"""
+        if route_type == "driving":
+            return 0
+        if route_type == "transit":
+            return 1
+        return 2
 
 #创建全局服务实例
 _amap_servicer = None

@@ -71,17 +71,21 @@ def get_llm() -> BaseChatModel:
 
     if _llm_instance is None:
         settings = get_settings()
+        api_key = os.getenv('LLM_API_KEY') or os.getenv('OPENAI_API_KEY') or settings.openai_api_key
+        base_url = os.getenv('LLM_BASE_URL') or settings.openai_base_url
+        model = os.getenv('LLM_MODEL_ID') or settings.openai_model
+        provider = os.getenv('LLM_PROVIDER') or settings.openai_provider
         _llm_instance = _create_chat_model(
-            model=settings.openai_model,
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url,
-            provider=settings.openai_provider,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            provider=provider,
         )
         _print_llm_info(
             "✅ LLM服务初始化成功",
             _llm_instance,
-            settings.openai_provider,
-            settings.openai_model,
+            provider,
+            model,
         )
 
     return _llm_instance

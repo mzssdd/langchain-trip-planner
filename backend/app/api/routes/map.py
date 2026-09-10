@@ -150,10 +150,12 @@ async def health_check():
         # 检查服务是否可用
         service = get_amap_service()
 
+        tool_names = await service.mcp_tool.get_tool_names()
         return {
             "status": "healthy",
             "service": "map-service",
-            "mcp_tools_count": len(service.mcp_tool._available_tools)
+            "mcp_tools_count": len(tool_names),
+            "mcp_tools": tool_names,
         }
     except Exception as e:
         raise HTTPException(
